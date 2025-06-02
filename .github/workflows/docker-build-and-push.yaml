@@ -5,7 +5,7 @@ on:
     inputs:
       dockerfile-path:
         type: string
-        default: '.'
+        default: 'Dockerfile'
         required: true
         description: Path to the Dockerfile relative to the root of the app directory.
       app-name:
