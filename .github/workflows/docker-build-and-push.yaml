@@ -6,7 +6,7 @@ on:
       dockerfile-path:
         type: string
         default: 'Dockerfile'
-        required: true
+        required: false
         description: Path to the Dockerfile relative to the root of the app directory.
       app-name:
         type: string
@@ -18,7 +18,7 @@ on:
         description: Prefix for the application tag.
       working-directory:
         type: string
-        required: true
+        required: false
         default: '.'
         description: Optional working directory for the build context, defaults to apps/$input.app-name.
 jobs:
