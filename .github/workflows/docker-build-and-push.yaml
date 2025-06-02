@@ -5,6 +5,7 @@ on:
     inputs:
       dockerfile-path:
         type: string
+        default: '.'
         required: true
         description: Path to the Dockerfile relative to the root of the app directory.
       app-name:
@@ -17,7 +18,8 @@ on:
         description: Prefix for the application tag.
       working-directory:
         type: string
-        required: false
+        required: true
+        default: '.'
         description: Optional working directory for the build context, defaults to apps/$input.app-name.
 jobs:
   
@@ -67,4 +69,4 @@ jobs:
             -t $REGISTRY/$REPOSITORY:latest \
             -t $REGISTRY/$REPOSITORY:${{ inputs.app-tag-prefix }}-$IMAGE_TAG \
             -f ${{ inputs.dockerfile-path }} .
-        working-directory: ${{ inputs.working-directory || format('apps/{0}', inputs.app-name) }}
+        working-directory: ${{ inputs.working-directory }}

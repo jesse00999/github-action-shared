@@ -9,7 +9,7 @@ on:
         description: Name of the Helm chart to be packaged and pushed.
       working_directory:
         type: string
-        required: false
+        required: true
         default: '.'
         description: Directory where the Helm chart is located.
 jobs:
