@@ -1,0 +1,51 @@
+name: helm package and push
+
+on:
+  workflow_call:
+    inputs:
+      helm_chart_name:
+        type: string
+        required: true
+        description: Name of the Helm chart to be packaged and pushed.
+      application_name:
+        type: string
+        required: true
+        description: Name of the application to be packaged and pushed.
+jobs:
+  
+  package-and-push:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+          helm version --short
+
+      - name: Login helm to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username ${{ github.repository_owner }} --password-stdin
+
+      - name: Get current date
+        run: echo "DATE_TAG=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Defining helm chart version
+        run: |
+          if [ "$GITHUB_REF" == "refs/heads/main" ]; then
+            echo "HELM_CHART_VERSION=0.1.$DATE_TAG" >> $GITHUB_ENV
+          elif [ "$GITHUB_REF" == "refs/heads/staging" ]; then
+            echo "HELM_CHART_VERSION=0.2.$DATE_TAG" >> $GITHUB_ENV
+          else
+            echo "HELM_CHART_VERSION=0.3.$DATE_TAG" >> $GITHUB_ENV
+          fi
+
+      - name: Package Helm chart
+        run: helm package apps/${{ inputs.application_name}}/deployment/${{ inputs.helm_chart_name }} --version $HELM_CHART_VERSION --destination .
+      
+      - name: Push Helm chart to ghcr.io
+        run: |
+          helm push ${{ inputs.helm_chart_name }}-${{ env.HELM_CHART_VERSION }}.tgz oci://ghcr.io/avantpage/${{ inputs.helm_chart_name }}
+          helm show chart oci://ghcr.io/avantpage/${{ inputs.helm_chart_name }}/${{ inputs.helm_chart_name}} --version ${{ env.HELM_CHART_VERSION }}

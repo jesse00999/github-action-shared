@@ -1,0 +1,70 @@
+name: docker build and push
+
+on:
+  workflow_call:
+    inputs:
+      dockerfile-path:
+        type: string
+        required: true
+        description: Path to the Dockerfile relative to the root of the app directory.
+      app-name:
+        type: string
+        required: true
+        description: Name of the application to be built and pushed.
+      app-tag-prefix:
+        type: string
+        required: true
+        description: Prefix for the application tag.
+      working-directory:
+        type: string
+        required: false
+        description: Optional working directory for the build context, defaults to apps/$input.app-name.
+jobs:
+  
+  package-and-push:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Get current date
+        run: echo "DOCKER_DATE_ENV_TAG=$(date +%s)" >> $GITHUB_ENV
+
+      # I need to know better the workflow the guys use
+      - name: Defining env tag name
+        run: |
+          if [ "$GITHUB_REF" == "refs/heads/main" ]; then
+            echo "DOCKER_ENV_TAG=prod" >> $GITHUB_ENV
+          elif [ "$GITHUB_REF" == "refs/heads/staging" ]; then
+            echo "DOCKER_ENV_TAG=staging" >> $GITHUB_ENV
+          else
+            echo "DOCKER_ENV_TAG=dev" >> $GITHUB_ENV
+          fi
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+# https://github.com/docker/build-push-action
+# No cache-from directive was being used in the original code
+# My approach do not provide build metrics
+      - name: Build and push container image to registry
+        env:
+            REGISTRY: ghcr.io
+            REPOSITORY: avantpage/${{ inputs.app-name}}
+            IMAGE_TAG: "${{ env.DOCKER_ENV_TAG }}-${{ env.DOCKER_DATE_ENV_TAG }}"            
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --push \
+            -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
+            -t $REGISTRY/$REPOSITORY:latest \
+            -t $REGISTRY/$REPOSITORY:${{ inputs.app-tag-prefix }}-$IMAGE_TAG \
+            -f ${{ inputs.dockerfile-path }} .
+        working-directory: ${{ inputs.working-directory || format('apps/{0}', inputs.app-name) }}
