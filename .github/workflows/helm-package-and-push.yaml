@@ -7,10 +7,11 @@ on:
         type: string
         required: true
         description: Name of the Helm chart to be packaged and pushed.
-      application_name:
+      working_directory:
         type: string
-        required: true
-        description: Name of the application to be packaged and pushed.
+        required: false
+        default: '.'
+        description: Directory where the Helm chart is located.
 jobs:
   
   package-and-push:
@@ -43,7 +44,7 @@ jobs:
           fi
 
       - name: Package Helm chart
-        run: helm package apps/${{ inputs.application_name}}/deployment/${{ inputs.helm_chart_name }} --version $HELM_CHART_VERSION --destination .
+        run: helm package ${{ inputs.working_directory }}/deployment/${{ inputs.helm_chart_name }} --version $HELM_CHART_VERSION --destination .
       
       - name: Push Helm chart to ghcr.io
         run: |
